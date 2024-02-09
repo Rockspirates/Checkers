@@ -1,0 +1,6 @@
+> Overcounting in generateLegalMoves()
+
+
+
+To find my commments:
+search "MS{i}" where i is my commit number
