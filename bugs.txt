@@ -1,4 +1,13 @@
-> Overcounting in generateLegalMoves()
+> Move function has bugs
+    Test cases to find out 
+> Does not force alternate moves for each side. One side can continuously move.
+
+
+
+
+
+RESOLVED > Overcounting in generateLegalMoves()
+
 
 
 

@@ -1,5 +1,5 @@
 import pygame
-
+import pygame.gfxdraw
 pygame.init()
 
 #aspects of the game window
@@ -72,7 +72,7 @@ def drawLegalSquare(row, col):
     darker_color = DARK_BLUE if ((7*row + col) % 2 == 0) else DARK_RED
     center_x = col * squarewidth + squarewidth // 2
     center_y = row * squarewidth + squarewidth // 2
-    pygame.draw.circle(win, darker_color, (center_x, center_y), circle_radius)
+    pygame.gfxdraw.filled_circle(win, center_x, center_y, circle_radius, darker_color)
 
 # this indicates all the pieces which would be captured when
 # you jump over them
@@ -94,7 +94,10 @@ def drawCaptureSquare(row, col): # row and col only
 9 indicates the south-east direction
 -9 indicates the north-west direction
 
+You can make sense of these directions by adding them to the index of a cell (row*8+col)
 
+then I find the distance it has from the sides of the board and then find the minimum distance in each direction
+then I put the information in the dictionary
 
 """
 numsToEdges = []
@@ -112,18 +115,25 @@ for row in range(8):
             9: min(numSouth, numEast),
             -9: min(numNorth, numWest)
         }
+
+# This function is used to find the available moves in a particular direction
 def findMoves(board, row, col, dir):
-    moves = list()
+    moves = list() # where I will store the moves. Moves are stored as a tuple containing the FINAL_INDEX, DIRECTION
     index = 8*row + col
     index += dir
-    findBlank = False
-    i = 0
-    move = -1
-    first = True
+    findBlank = False # This is the term which alternates in the diagonal. True when I want to find blank in diag and False when I wanna find Opp piece
+    i = 0 # Counter which counts the steps till I reach the edge
+    move = -1 # initiate with a NULL Move
+    first = True # For the corner case when the blank is the first square encounter which is a valid move
+    me = board[row*8+col]
+    if not me: # to set the opp and me variable which are later used to identify pieces
+        opp = 1
+    else:
+        opp = 0
     val = numsToEdges[row*8 + col][dir]
     while i != val:
         i+=1
-        if board[index] == 1:
+        if board[index] == opp:
             if first:
                 first = False
             index+=dir
@@ -144,23 +154,30 @@ def findMoves(board, row, col, dir):
             else:
                 if move != -1:
                     moves.append((move, dir))
+        if board[index] == me:
+            if move != -1:
+                moves.append((index, dir))
     return moves
 
-def generateLegalMoves(board, row, col):
 
+# This moves uses the last function to generate moves in the appropriate direction considering player
+def generateLegalMoves(board, row, col):
     moves = []
     index = 8*row+col
     if board[index] == 0: # RED'S TURN, GOES FROM TOP TO BOTTOM
-        for dir in [7, 9]:
-            moves.extend(findMoves(board, row, col, dir))
+        for dir in [7, 9]: # Downward Direction Diagonals
+            moves.extend(findMoves(board, row, col, dir)) # inserts tuples of the form (FINAL_INDEX, DIRECTION)
     else: # BLACKS'S TURN, GOES FROM BOTTOM TO TOP
-        for dir in [-7, -9]:
+        for dir in [-7, -9]: # Upward Direction Diagonals 
             moves.extend(findMoves(board, row, col, dir))
     return moves
 
+
+# This is the actual function which updates the move. This also checks if the clicked square is in the legal squares or not to prevent illegal moves
+# Also updates the positions array in the backend
 def move(prev_row, prev_col, row, col, moves):
     index = 8*row + col
-    if index not in [x[0] for x in moves]:
+    if index not in [x[0] for x in moves]: # checks if the square is in legal moves
         drawboard()
         return
     temp = positions[prev_row*8+prev_col]
@@ -182,9 +199,11 @@ def move(prev_row, prev_col, row, col, moves):
         curr_index+=move_dir
         positions[curr_index] = -1
 
-    drawboard()
+    drawboard() # Draws the updated positions array on the board
     pass
 
+
+# Shows the legal moves available to the selectetd piece
 def showLegalMoves(board, row, col):
     drawboard()
     moves = generateLegalMoves(board, row, col)
@@ -205,17 +224,19 @@ def showLegalMoves(board, row, col):
                 a = True
         drawLegalSquare(target_square//8, target_square%8)
     return moves
+
+# Gets the square coordinates from mouse click
 def getSquareFromClick(pos):
     x, y = pos
     row = y // squarewidth
     col = x // squarewidth
     return row, col
 
+
+# Draws the complete board
 def drawboard():
     for i in range(8):
         for j in range(8):
             drawsquare(i,j)
             drawpieces(i,j)
-            # if i == 3 or i == 4:
-            #     drawLegalSquare(i, j)
     pygame.display.update()
