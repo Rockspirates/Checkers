@@ -149,11 +149,15 @@ def findMoves(board, row, col, dir):
 def generateLegalMoves(board, row, col):
     moves = []
     index = 8*row+col
-    if board[index] == 0: # RED'S TURN, GOES FROM TOP TO BOTTOM
+    piece = board[index]
+    if piece == 0: # RED'S TURN, GOES FROM TOP TO BOTTOM
         for dir in [7, 9]: # Downward Direction Diagonals
             moves.extend(findMoves(board, row, col, dir)) # inserts tuples of the form (FINAL_INDEX, DIRECTION)
-    else: # BLACKS'S TURN, GOES FROM BOTTOM TO TOP
+    elif piece == 1: # BLACKS'S TURN, GOES FROM BOTTOM TO TOP
         for dir in [-7, -9]: # Upward Direction Diagonals 
+            moves.extend(findMoves(board, row, col, dir))
+    else: # For the king piece
+        for dir in [-7, -9, 7, 9]: # Upward Direction Diagonals 
             moves.extend(findMoves(board, row, col, dir))
     return moves
 
@@ -164,14 +168,21 @@ def move(prev_row, prev_col, row, col, moves):
     index = 8*row + col
     if index not in [x[0] for x in moves]: # checks if the square is in legal moves
         drawboard()
-        return
+        return -1
     temp = positions[prev_row*8+prev_col]
-    positions[prev_row*8+prev_col] = positions[row*8+col]
-    positions[row*8+col] = temp
+    positions[prev_row*8+prev_col] = -1
+    if (row == 0 or row == 7): # King Promotion Condition
+        if (row == 0 and temp):
+            positions[index] = 3
+            
+        elif (row == 7 and not temp):
+            positions[index] = 2
+    else:
+        positions[index] = temp
     curr_index = prev_row*8+prev_col
     final_index = row*8+col
     diff = final_index - curr_index
-    if diff < 0:
+    if diff < 0: # To extrapolate the move direction from the initial and final square
         mult = -1
     else:
         mult = 1
@@ -179,13 +190,23 @@ def move(prev_row, prev_col, row, col, moves):
         dir_abs = 7
     else:
         dir_abs = 9
-    move_dir = mult*dir_abs
+    move_dir = mult*dir_abs # move direction obtained
+    captured, notMoves = False, False
+    if (diff)//dir_abs == 2: # need to be updated if you are considering chain moves
+        captured = True
+    if (not generateLegalMoves(positions, row, col)):
+        notMoves = True
     while curr_index != final_index-move_dir:
         curr_index+=move_dir
         positions[curr_index] = -1
-
     drawboard() # Draws the updated positions array on the board
-    pass
+    if captured:
+        if notMoves:
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 # Shows the legal moves available to the selectetd piece
