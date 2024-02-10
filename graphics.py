@@ -118,6 +118,7 @@ for row in range(8):
 
 # This function is used to find the available moves in a particular direction
 def findMoves(board, row, col, dir):
+    print("Finding moves for index:", row*8+col)
     moves = list() # where I will store the moves. Moves are stored as a tuple containing the FINAL_INDEX, DIRECTION
     index = 8*row + col
     index += dir
@@ -133,7 +134,9 @@ def findMoves(board, row, col, dir):
     val = numsToEdges[row*8 + col][dir]
     while i != val:
         i+=1
+        print(i, index)
         if board[index] == opp:
+            print("opponent detected at", index)
             if first:
                 first = False
             index+=dir
@@ -141,9 +144,12 @@ def findMoves(board, row, col, dir):
                 findBlank = True
                 continue
             else:
+                print("Opponent detected when I was trying to detect blank", move)
                 if move != -1:
                     moves.append((move, dir))
+                break
         if board[index] == -1:
+            print("blank detected at", index)
             if first:
                 moves.append((index, dir))
                 break
@@ -154,9 +160,14 @@ def findMoves(board, row, col, dir):
             else:
                 if move != -1:
                     moves.append((move, dir))
+                break
         if board[index] == me:
+            print("my piece detected at", index)
             if move != -1:
                 moves.append((index, dir))
+            break
+    if move != -1:
+        moves.append((move, dir))
     return moves
 
 
