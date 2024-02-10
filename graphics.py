@@ -133,30 +133,15 @@ def findMoves(board, row, col, dir):
     val = numsToEdges[row*8 + col][dir]
     while i != val:
         i+=1
-        if board[index] == opp:
-            if first:
-                first = False
-            index+=dir
-            if not findBlank:
-                findBlank = True
-                continue
-            else:
-                if move != -1:
-                    moves.append((move, dir))
         if board[index] == -1:
-            if first:
-                moves.append((index, dir))
-                break
-            if findBlank:
-                findBlank = False
-                move = index
-                index += dir
-            else:
-                if move != -1:
-                    moves.append((move, dir))
+            move = index
+            moves.append((move, dir))
+            break
+        if board[index] == opp:
+            index+=dir
+            continue
         if board[index] == me:
-            if move != -1:
-                moves.append((index, dir))
+            break
     return moves
 
 
