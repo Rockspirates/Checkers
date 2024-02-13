@@ -1,5 +1,6 @@
 import pygame
 import pygame.gfxdraw
+from copy import deepcopy
 pygame.init()
 
 #aspects of the game window
@@ -15,24 +16,22 @@ positions = [-1,0,-1,0,-1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,-1,0,-1,0,-1,0,-1,-1,-
 win = pygame.display.set_mode((screenwidth,screenheight))
 pygame.display.set_caption("Checkers")
 
-
-
 # updates the board
-
 # MS1: Imports the sprites
 black_standard = pygame.image.load('sprites/black-checker/standard.png')
 black_King = pygame.image.load('sprites/black-checker/king-me.png')
 red_standard = pygame.image.load('sprites/red-checker/standard.png')
 red_King = pygame.image.load('sprites/red-checker/king-me.png')
 
-
 # BLUE = (255,255,240)
 # RED = (173,216,230)
 
 BLUE = (255,255,240)
 DARK_BLUE = (209, 229, 244)
+LIGHTER_BLUE = (229, 249, 264)
 RED = (120,144,156)
 DARK_RED = (32, 51, 84)
+LIGHTER_RED = (52, 71, 104)
 
 def drawsquare(row, column):
     if (7*row + column) % 2 == 1:
@@ -64,6 +63,9 @@ def drawpieces(row, col):
         img = pygame.transform.smoothscale(black_King, (squarewidth*factor, squarewidth*factor))
         win.blit(img, (col*squarewidth, row*squarewidth + factor1))
 
+# def highlightSquare(row, col):
+#     lighter_color = DARK_BLUE if ((7*row + col) % 2 == 0) else DARK_RED     
+#     pygame.draw.rect(win, lighter_color, (col*squarewidth, row*squarewidth, squarewidth, squarewidth))
 
 # draws the legal clear square which a piece can jump to (when)
 # you click a piece, it can show you where you can possibly land up
@@ -73,6 +75,7 @@ def drawLegalSquare(row, col):
     center_x = col * squarewidth + squarewidth // 2
     center_y = row * squarewidth + squarewidth // 2
     pygame.gfxdraw.filled_circle(win, center_x, center_y, circle_radius, darker_color)
+    
 
 # this indicates all the pieces which would be captured when
 # you jump over them
@@ -87,20 +90,18 @@ def drawCaptureSquare(row, col): # row and col only
     # Draw hollow circle which shows the captured square
     pygame.draw.circle(win, darker_color, (center_x, center_y), circle_radius, border_width)
 
-
 """
 7 indicates the south-west direction
 -7 indicates the north-east direction
 9 indicates the south-east direction
 -9 indicates the north-west direction
-
 You can make sense of these directions by adding them to the index of a cell (row*8+col)
-
 then I find the distance it has from the sides of the board and then find the minimum distance in each direction
 then I put the information in the dictionary
-
 """
+legal_coins = dict()
 numsToEdges = []
+moves = []
 for i in range(64):
     numsToEdges.append(dict())
 for row in range(8):
@@ -116,120 +117,14 @@ for row in range(8):
             -9: min(numNorth, numWest)
         }
 
-# This function is used to find the available moves in a particular direction
-def findMoves(board, row, col, dir):
-    moves = list() # where I will store the moves. Moves are stored as a tuple containing the FINAL_INDEX, DIRECTION
-    index = 8*row + col
-    index += dir
-    findBlank = False # This is the term which alternates in the diagonal. True when I want to find blank in diag and False when I wanna find Opp piece
-    i = 0 # Counter which counts the steps till I reach the edge
-    move = -1 # initiate with a NULL Move
-    first = True # For the corner case when the blank is the first square encounter which is a valid move
-    me = board[row*8+col]
-    if not me: # to set the opp and me variable which are later used to identify pieces
-        opp = 1
-    else:
-        opp = 0
-    val = numsToEdges[row*8 + col][dir]
-    while i != val:
-        i+=1
-        if board[index] == -1:
-            move = index
-            moves.append((move, dir))
-            break
-        if board[index] == opp:
-            index+=dir
-            continue
-        if board[index] == me:
-            break
-    return moves
-
-
-# This moves uses the last function to generate moves in the appropriate direction considering player
-def generateLegalMoves(board, row, col):
-    moves = []
-    index = 8*row+col
-    piece = board[index]
-    if piece == 0: # RED'S TURN, GOES FROM TOP TO BOTTOM
-        for dir in [7, 9]: # Downward Direction Diagonals
-            moves.extend(findMoves(board, row, col, dir)) # inserts tuples of the form (FINAL_INDEX, DIRECTION)
-    elif piece == 1: # BLACKS'S TURN, GOES FROM BOTTOM TO TOP
-        for dir in [-7, -9]: # Upward Direction Diagonals 
-            moves.extend(findMoves(board, row, col, dir))
-    else: # For the king piece
-        for dir in [-7, -9, 7, 9]: # Upward Direction Diagonals 
-            moves.extend(findMoves(board, row, col, dir))
-    return moves
-
-
-# This is the actual function which updates the move. This also checks if the clicked square is in the legal squares or not to prevent illegal moves
-# Also updates the positions array in the backend
-def move(prev_row, prev_col, row, col, moves):
-    index = 8*row + col
-    if index not in [x[0] for x in moves]: # checks if the square is in legal moves
-        drawboard()
-        return -1
-    temp = positions[prev_row*8+prev_col]
-    positions[prev_row*8+prev_col] = -1
-    if (row == 0 or row == 7): # King Promotion Condition
-        if (row == 0 and temp):
-            positions[index] = 3
-            
-        elif (row == 7 and not temp):
-            positions[index] = 2
-    else:
-        positions[index] = temp
-    curr_index = prev_row*8+prev_col
-    final_index = row*8+col
-    diff = final_index - curr_index
-    if diff < 0: # To extrapolate the move direction from the initial and final square
-        mult = -1
-    else:
-        mult = 1
-    if abs(diff)%7 == 0:
-        dir_abs = 7
-    else:
-        dir_abs = 9
-    move_dir = mult*dir_abs # move direction obtained
-    captured, notMoves = False, False
-    if (diff)//dir_abs == 2: # need to be updated if you are considering chain moves
-        captured = True
-    if (not generateLegalMoves(positions, row, col)):
-        notMoves = True
-    while curr_index != final_index-move_dir:
-        curr_index+=move_dir
-        positions[curr_index] = -1
-    drawboard() # Draws the updated positions array on the board
-    if captured:
-        if notMoves:
-            return False
-        else:
-            return True
-    else:
+def kr(index, dir):
+    if numsToEdges[index][dir] < 2:
         return False
-
-
-# Shows the legal moves available to the selectetd piece
-def showLegalMoves(board, row, col):
-    drawboard()
-    moves = generateLegalMoves(board, row, col)
-    for move in moves:
-        target_square, move_dir = move
-        if move_dir + (8*row+col) == target_square:
-            drawLegalSquare(target_square//8, target_square%8)
-            continue
-        curr_index = row*8 + col
-        a = True
-        while curr_index != target_square:
-            curr_index += move_dir
-            if a:
-                drawCaptureSquare(curr_index//8, curr_index%8)
-                a = False
-            else:
-                drawLegalSquare(curr_index//8, curr_index%8)
-                a = True
-        drawLegalSquare(target_square//8, target_square%8)
-    return moves
+    return ((positions[index+dir] == 1 or positions[index+dir] == 3) and positions[index+2*dir]  == -1)
+def br(index, dir):
+    if numsToEdges[index][dir] < 2:
+        return False
+    return ((positions[index+dir] == 0 or positions[index+dir] == 2) and positions[index+2*dir]  == -1)
 
 # Gets the square coordinates from mouse click
 def getSquareFromClick(pos):
@@ -238,11 +133,153 @@ def getSquareFromClick(pos):
     col = x // squarewidth
     return row, col
 
-
 # Draws the complete board
 def drawboard():
     for i in range(8):
         for j in range(8):
             drawsquare(i,j)
+            # if (i == 3 or i == 4):
+            #     # highlightSquare(i, j)
             drawpieces(i,j)
     pygame.display.update()
+def printPositions():
+    for i in range(8):
+        for j in range(8):
+            piece = positions[i*8+j]
+            if piece < 0:
+                print(" -1", end = "")
+            else:
+                print(f"  {piece}", end = "")
+        print()
+def capture_coin(kill_bit, prev_index, index):
+    if kill_bit:
+        x = (index - prev_index) // 2
+        positions[prev_index+x] = -1
+        positions[index] = positions[prev_index]
+        positions[prev_index] = -1
+    else:
+        positions[index] = positions[prev_index]
+        positions[prev_index] = -1
+    row = index//8
+    if row == 0 and (positions[index] == 1):
+        positions[index] = 3
+        print(prev_index, index)
+    elif row == 7 and (positions[index] == 0):
+        positions[index] = 2
+        print(prev_index, index)
+    drawboard()
+   
+        
+def display_kill_moves(row, col, moves):
+    set_positions = []
+    index = 8*row + col
+    for move in moves:
+        Index = index + move
+        row_f = Index // 8
+        col_f = Index%8
+        drawCaptureSquare(row_f, col_f)
+        Index += move
+        set_positions.append(Index)
+        row_f = Index // 8
+        col_f = Index%8
+        drawLegalSquare(row_f,col_f)
+        pygame.display.update()
+    # drawboard()
+    
+    return set_positions
+
+def display_normal_moves(row, col, moves):
+    set_positions = []
+    index = 8*row + col
+    for move in moves:
+        Index = index + move
+        set_positions.append(Index)
+        row_f = Index // 8
+        col_f = Index%8
+        drawLegalSquare(row_f,col_f)
+    pygame.display.update()
+    return set_positions
+
+def getkillmoves(index):
+    dir = []
+    coin = positions[index]
+    if coin == 0:
+        dir = [7,9]
+    if coin == 2:
+        dir = [-9,-7,7,9]
+    for i in dir:
+        if kr(index, i):
+            moves.append(i)
+    dir = []
+    if coin == 1:
+        dir = [-7,-9]
+    if coin == 3:
+        dir = [-9,-7,7,9]
+    for i in dir:
+        if br(index, i):
+            moves.append(i)
+
+def getnormalmoves(index):
+    dir = []
+    coin = positions[index]
+    if coin==0:
+        dir = [7,9]
+    if coin == 2 or coin == 3:
+        dir = [-9,-7,7,9]
+    if coin == 1:
+        dir = [-7,-9]
+    for i in dir:
+        if (numsToEdges[index][i] >= 1) and (positions[index+i] == -1):
+            moves.append(i)
+
+def getlegalcoins(positions, red_turn, prev_row, prev_col):
+    legal_coins.clear()
+    if not prev_row == -1:
+        index = prev_row*8 + prev_col
+        coins = [0,1,2,3]
+        for i in coins:
+            if positions[index] == i:
+                getkillmoves(index)
+                if len(moves):
+                    legal_coins[index] = deepcopy(moves)
+                    moves.clear()
+                    return legal_coins, True
+        return legal_coins, False 
+    else:
+        kill_bit = False 
+        if red_turn:
+            coins = [0,2]
+        else:
+            coins = [1,3]
+        for index in range(64):
+                if kill_bit:
+                    for i in coins:
+                        if positions[index] == i:
+                            getkillmoves(index)
+                            if len(moves):
+                                legal_coins[index] = deepcopy(moves)
+                                moves.clear()                  
+                else:
+                    for i in coins:
+                        if positions[index] == i:
+                            getkillmoves(index)
+                            print("gey", moves, index)
+                            if len(moves):
+                                legal_coins.clear()
+                                legal_coins[index] = deepcopy(moves)
+                                kill_bit = True
+                                moves.clear()
+                                break
+                            getnormalmoves(index)
+                            print("gey", moves)
+                            if len(moves):
+                                legal_coins[index] = deepcopy(moves)
+                                moves.clear()
+        return legal_coins, kill_bit
+                            
+
+
+
+
+
+            
