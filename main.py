@@ -20,10 +20,14 @@ while run:
                 clicked_pos = getSquareFromClick(pygame.mouse.get_pos())
                 row, col = clicked_pos
                 if not firstClick:
+                    if positions[row*8 + col] == -1:
+                        drawboard()
+                        continue
                     if continuation:
                         continuation = False
                     firstClick = True
-                    if positions[row*8+col] == (not currentTurn):
+                    opp = 0 if currentTurn else 1
+                    if positions[row*8+col] == opp:
                         drawboard()
                         continue
                     elif positions[row*8+col] == currentTurn:
@@ -44,8 +48,10 @@ while run:
                         continue
                     elif flag == -1:
                         continue
-
                 else:
+                    if positions[row*8 + col] == -1:
+                        drawboard()
+                        continue
                     if continuation:
                         if row*8 + col == cont_index:
                             firstClick = False
