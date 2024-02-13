@@ -17,7 +17,7 @@ blue_set_positions = []
 prev_col_g, prev_row_g = -1, -1
 prev_row, prev_col = -1, -1
 idle_kill_count = 0
-
+winner = False
 turnon = True
 while run:
     # If you want to quit in middle, just close the window
