@@ -6,6 +6,8 @@ pygame.init()
 #aspects of the game window
 screenwidth = 800
 screenheight = 800
+total_red = 12
+total_blue = 12
 
 #size of each grid in the board
 squarewidth = screenwidth // 8
@@ -63,9 +65,9 @@ def drawpieces(row, col):
         img = pygame.transform.smoothscale(black_King, (squarewidth*factor, squarewidth*factor))
         win.blit(img, (col*squarewidth, row*squarewidth + factor1))
 
-# def highlightSquare(row, col):
-#     lighter_color = DARK_BLUE if ((7*row + col) % 2 == 0) else DARK_RED     
-#     pygame.draw.rect(win, lighter_color, (col*squarewidth, row*squarewidth, squarewidth, squarewidth))
+def highlightSquare(row, col):
+    lighter_color = DARK_BLUE if ((7*row + col) % 2 == 0) else DARK_RED     
+    pygame.draw.rect(win, lighter_color, (col*squarewidth, row*squarewidth, squarewidth, squarewidth))
 
 # draws the legal clear square which a piece can jump to (when)
 # you click a piece, it can show you where you can possibly land up
@@ -135,13 +137,16 @@ def getSquareFromClick(pos):
 
 # Draws the complete board
 def drawboard():
+    k = 0
+    key_list = list(legal_coins.keys())
     for i in range(8):
         for j in range(8):
             drawsquare(i,j)
-            # if (i == 3 or i == 4):
-            #     # highlightSquare(i, j)
+            if 8*i + j in legal_coins:
+                highlightSquare(i, j)
             drawpieces(i,j)
     pygame.display.update()
+
 def printPositions():
     for i in range(8):
         for j in range(8):
@@ -151,24 +156,33 @@ def printPositions():
             else:
                 print(f"  {piece}", end = "")
         print()
+
 def capture_coin(kill_bit, prev_index, index):
+    global total_red
+    global total_blue
+    x = (index - prev_index) // 2
+    if abs(index - prev_index) % 2 == 0:
+        if positions[prev_index+x] == 0 or positions[prev_index+x] == 2:
+            total_red -= 1
+        elif positions[prev_index+x] == 1 or positions[prev_index+x] == 3:
+            total_blue -= 1
+        if total_red == 0:
+            print("Blue wins")
+        elif total_blue == 0:
+            print("Red wins")
     if kill_bit:
-        x = (index - prev_index) // 2
         positions[prev_index+x] = -1
-        positions[index] = positions[prev_index]
+        positions[index] = deepcopy(positions[prev_index])
         positions[prev_index] = -1
     else:
-        positions[index] = positions[prev_index]
+        positions[index] = deepcopy(positions[prev_index])
         positions[prev_index] = -1
     row = index//8
     if row == 0 and (positions[index] == 1):
         positions[index] = 3
-        print(prev_index, index)
     elif row == 7 and (positions[index] == 0):
         positions[index] = 2
-        print(prev_index, index)
     drawboard()
-   
         
 def display_kill_moves(row, col, moves):
     set_positions = []
@@ -183,9 +197,7 @@ def display_kill_moves(row, col, moves):
         row_f = Index // 8
         col_f = Index%8
         drawLegalSquare(row_f,col_f)
-        pygame.display.update()
-    # drawboard()
-    
+    pygame.display.update()    
     return set_positions
 
 def display_normal_moves(row, col, moves):
@@ -263,7 +275,6 @@ def getlegalcoins(positions, red_turn, prev_row, prev_col):
                     for i in coins:
                         if positions[index] == i:
                             getkillmoves(index)
-                            print("gey", moves, index)
                             if len(moves):
                                 legal_coins.clear()
                                 legal_coins[index] = deepcopy(moves)
@@ -271,7 +282,6 @@ def getlegalcoins(positions, red_turn, prev_row, prev_col):
                                 moves.clear()
                                 break
                             getnormalmoves(index)
-                            print("gey", moves)
                             if len(moves):
                                 legal_coins[index] = deepcopy(moves)
                                 moves.clear()

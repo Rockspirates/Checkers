@@ -4,8 +4,7 @@ from graphics import *
 
 run = True # for the while loop
 red_turn = True
-blue_turn = False
-turn_counter = True
+turnon = True
 kill_bit = False
 setmode = False
 kill_streak = False
@@ -17,7 +16,7 @@ red_set_positions = []
 blue_set_positions = []
 prev_col_g, prev_row_g = -1, -1
 prev_row, prev_col = -1, -1
-drawboard()
+idle_kill_count = 0
 
 turnon = True
 while run:
@@ -25,22 +24,37 @@ while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+        if idle_kill_count == 40:
+            winner = False
+            run = False
         if red_turn and turnon:
+            idle_kill_count+=1
             red_coins_moves, kill_bit = getlegalcoins(positions, True, prev_row_g, prev_col_g)
+            if kill_bit:
+                idle_kill_count = 0
+            if prev_row_g == -1 and not (red_coins_moves):
+                run = False
+                winner = False
             turnon = False
+            drawboard()
             if not len(red_coins_moves) :
                 prev_row_g = -1
                 red_turn = False
                 turnon = True
-            print(red_coins_moves, kill_bit)
         elif not red_turn and turnon:
+            idle_kill_count+=1
             blue_coins_moves, kill_bit = getlegalcoins(positions, False, prev_row_g, prev_col_g)
+            if kill_bit:
+                idle_kill_count = 0
+            if prev_row_g == -1 and not (blue_coins_moves):
+                run = False
+                winner = True
             turnon = False
+            drawboard()
             if not len(blue_coins_moves):
                 prev_row_g = -1
                 red_turn = True
                 turnon = True
-            print(blue_coins_moves, kill_bit)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             
@@ -73,14 +87,11 @@ while run:
                         break
                 
                 if setmode:
-                    # if red_turn:
-                    #     red_set_positions = []
-                    # else:
-                    #     blue_set_positions = []
                     set_positions.clear()
                     drawboard()
                 else:
                     continue
+
             moves = []
             if red_turn:
                 coins_moves = red_coins_moves
