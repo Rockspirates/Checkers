@@ -7,10 +7,14 @@
 > Weird jump square visual error
 > Blank Square Show Legal Moves error
 
+
+
 RESOLVED> After a capture, only the capturee piece can move
 RESOLVED> King Promotion
 RESOLVED> Does not force alternate moves for each side. One side can continuously move.
 RESOLVED > Overcounting in generateLegalMoves()
 RESOLVED> Alternation
+
+
 
 

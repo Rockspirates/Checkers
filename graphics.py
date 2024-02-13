@@ -117,32 +117,51 @@ for row in range(8):
         }
 
 # This function is used to find the available moves in a particular direction
-def findMoves(board, row, col, dir):
-    moves = list() # where I will store the moves. Moves are stored as a tuple containing the FINAL_INDEX, DIRECTION
-    index = 8*row + col
-    index += dir
-    findBlank = False # This is the term which alternates in the diagonal. True when I want to find blank in diag and False when I wanna find Opp piece
-    i = 0 # Counter which counts the steps till I reach the edge
-    move = -1 # initiate with a NULL Move
-    first = True # For the corner case when the blank is the first square encounter which is a valid move
-    me = board[row*8+col]
-    if not me: # to set the opp and me variable which are later used to identify pieces
-        opp = 1
+def findMoves(board, row, col, directions):
+    totalNormalMoves = []
+    totalKillingMoves = []
+    kill_count = False
+    for dir in directions:
+        normalmoves = list() # where I will store the moves. Moves are stored as a tuple containing the FINAL_INDEX, DIRECTION
+        killmoves = list()
+        index = 8*row + col
+        index += dir
+        findBlank = False # This is the term which alternates in the diagonal. True when I want to find blank in diag and False when I wanna find Opp piece
+        i = 0 # Counter which counts the steps till I reach the edge
+        move = -1 # initiate with a NULL Move
+        first = True # For the corner case when the blank is the first square encounter which is a valid move
+        me = board[row*8+col]
+        if not me: # to set the opp and me variable which are later used to identify pieces
+            opp = 1
+        else:
+            opp = 0
+        val = numsToEdges[row*8 + col][dir]
+        while i != val:
+            i+=1
+            if board[index] == -1:
+                if i == 1 and kill_count:
+                    break
+                move = index
+                if i != 1:
+                    kill_count = True
+                if kill_count:
+                    killmoves.append((move, dir))
+                else:
+                    normalmoves.append((move, dir))
+                break
+            if board[index] == opp:
+                index+=dir
+                continue
+            if board[index] == me:
+                break
+        if kill_count:
+            totalKillingMoves.extend(killmoves)
+        else:
+            totalNormalMoves.extend(normalmoves)
+    if not totalKillingMoves:
+        return totalNormalMoves
     else:
-        opp = 0
-    val = numsToEdges[row*8 + col][dir]
-    while i != val:
-        i+=1
-        if board[index] == -1:
-            move = index
-            moves.append((move, dir))
-            break
-        if board[index] == opp:
-            index+=dir
-            continue
-        if board[index] == me:
-            break
-    return moves
+        return totalKillingMoves
 
 
 # This moves uses the last function to generate moves in the appropriate direction considering player
@@ -151,14 +170,15 @@ def generateLegalMoves(board, row, col):
     index = 8*row+col
     piece = board[index]
     if piece == 0: # RED'S TURN, GOES FROM TOP TO BOTTOM
-        for dir in [7, 9]: # Downward Direction Diagonals
-            moves.extend(findMoves(board, row, col, dir)) # inserts tuples of the form (FINAL_INDEX, DIRECTION)
+        dir = [7, 9] # Downward Direction Diagonals
+        moves.extend(findMoves(board, row, col, dir)) # inserts tuples of the form (FINAL_INDEX, DIRECTION)
     elif piece == 1: # BLACKS'S TURN, GOES FROM BOTTOM TO TOP
-        for dir in [-7, -9]: # Upward Direction Diagonals 
-            moves.extend(findMoves(board, row, col, dir))
+        dir = [-7, -9] # Upward Direction Diagonals 
+        moves.extend(findMoves(board, row, col, dir))
     else: # For the king piece
-        for dir in [-7, -9, 7, 9]: # Upward Direction Diagonals 
-            moves.extend(findMoves(board, row, col, dir))
+        dir = [-7, -9, 7, 9] # Upward Direction Diagonals 
+        moves.extend(findMoves(board, row, col, dir))
+    print("generated movves are", moves)
     return moves
 
 
@@ -195,23 +215,26 @@ def move(prev_row, prev_col, row, col, moves):
     if (diff)//dir_abs == 2: # need to be updated if you are considering chain moves
         captured = True
     if (not generateLegalMoves(positions, row, col)):
-        notMoves = True
+        notMoves = True # Sees if there are any moves left
     while curr_index != final_index-move_dir:
         curr_index+=move_dir
         positions[curr_index] = -1
     drawboard() # Draws the updated positions array on the board
     if captured:
         if notMoves:
-            return False
+            return 0
         else:
-            return True
+            return 1
     else:
-        return False
+        return 0
 
 
 # Shows the legal moves available to the selectetd piece
-def showLegalMoves(board, row, col):
+def showLegalMoves(board, row, col, prev_kill, kill_row, kill_col):
     drawboard()
+    if prev_kill:
+        if (row != kill_row) or (col != kill_col):
+            return []
     moves = generateLegalMoves(board, row, col)
     for move in moves:
         target_square, move_dir = move
@@ -230,6 +253,9 @@ def showLegalMoves(board, row, col):
                 a = True
         drawLegalSquare(target_square//8, target_square%8)
     return moves
+
+            
+
 
 # Gets the square coordinates from mouse click
 def getSquareFromClick(pos):

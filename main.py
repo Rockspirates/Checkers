@@ -7,8 +7,10 @@ firstClick = True
 prev_row, prev_col = -1, -1
 legal_moves = []
 currentTurn = True
-continuation = False
-cont_index = -1
+
+prev_kill = False
+kill_row, kill_col = -1, -1
+
 drawboard()
 
 while run:
@@ -19,50 +21,56 @@ while run:
             if event.button == 1:
                 clicked_pos = getSquareFromClick(pygame.mouse.get_pos())
                 row, col = clicked_pos
+                # Sets the Opponent and Me Variables
+                if currentTurn:
+                    opp = 0
+                    me = 1
+                else:
+                    opp = 1
+                    me = 0
+
+                # Handles the Second Click
                 if not firstClick:
-                    if positions[row*8 + col] == -1:
+                    if positions[row*8 + col] == opp:
+                        firstClick = True
                         drawboard()
                         continue
-                    if continuation:
-                        continuation = False
                     firstClick = True
-                    opp = 0 if currentTurn else 1
-                    if positions[row*8+col] == opp:
-                        drawboard()
-                        continue
-                    elif positions[row*8+col] == currentTurn:
-                        legal_moves = showLegalMoves(positions, row, col)
+
+                    # If I misclick and click my own piece again,
+                    if positions[row*8+col] == currentTurn:
+                        legal_moves = showLegalMoves(positions, row, col, prev_kill, kill_row, kill_col)
                         prev_row, prev_col = row, col
                         firstClick = False
                         continue
+
                     flag = move(prev_row, prev_col, row, col, legal_moves)
                     if flag == 0:
                         if currentTurn:
                             currentTurn = False                 
                         else:
                             currentTurn = True
-                    elif flag == 1:
-                        continuation = True
-                        print("continuation is true now!")
-                        cont_index = 8*row + col
-                        continue
+                        prev_kill = False
+                        kill_row, kill_col = -1, -1
+
                     elif flag == -1:
-                        continue
-                else:
-                    if positions[row*8 + col] == -1:
+                        firstClick = True
                         drawboard()
                         continue
-                    if continuation:
-                        if row*8 + col == cont_index:
-                            firstClick = False
-                        else: 
-                            continue
-                    prev_row, prev_col = row, col
-                    legal_moves = showLegalMoves(positions, row, col)
-                    if positions[row*8+col] == currentTurn:
-                        firstClick = False
-                    else:
+
+                    elif flag == 1:
+                        prev_kill = True
+
+
+                else:
+                    if positions[row*8 + col] == -1 or positions[row*8 + col] == opp:
+                        drawboard()
                         continue
-                    prev_row, prev_col = row, col
+                    if not prev_kill:
+                        prev_row, prev_col = row, col
+                    else:
+                        prev_row, prev_col = kill_row, kill_col
+                    legal_moves = showLegalMoves(positions, row, col, prev_kill, kill_row, kill_col)
+                    firstClick = False
 
     pygame.display.flip()
