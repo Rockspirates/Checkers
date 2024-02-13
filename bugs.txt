@@ -7,6 +7,12 @@
 > Weird jump square visual error
 > Blank Square Show Legal Moves error
 
+> Altrenation
+> Force Killing Movve
+> If no move left, opponent turn
+> Killing Streak
+> King Move Streak
+
 RESOLVED> After a capture, only the capturee piece can move
 RESOLVED> King Promotion
 RESOLVED> Does not force alternate moves for each side. One side can continuously move.
