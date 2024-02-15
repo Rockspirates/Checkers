@@ -13,8 +13,7 @@ total_blue = 12
 squarewidth = screenwidth // 8
 
 #default positions of the coins
-positions = [-1,0,-1,0,-1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,-1,0,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,-1,1,-1,1,-1,1,-1,-1,1,-1,1,-1,1,-1,1,1,-1,1,-1,1,-1,1,-1]
-
+positions = [0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,-1,0,-1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,-1,0,-1,0,-1,0]
 win = pygame.display.set_mode((screenwidth,screenheight))
 pygame.display.set_caption("Checkers")
 
@@ -49,11 +48,11 @@ def drawpieces(row, col):
     factor2 = 5 # factor2 is specially for red_King to adjust its centre
     factorx = 1
     index = 8*row + col
-    if positions[index] == 0:
+    if positions[index] == 1:
         img = pygame.transform.smoothscale(red_standard, (squarewidth*factor, squarewidth*factor))
         win.blit(img, (col*squarewidth+factorx, row*squarewidth + factor1))
 
-    elif positions[index] == 1:
+    elif positions[index] == -1:
         img = pygame.transform.smoothscale(black_standard, (squarewidth*factor, squarewidth*factor))
         win.blit(img, (col*squarewidth+factorx, row*squarewidth + factor1))
     
@@ -61,12 +60,12 @@ def drawpieces(row, col):
         img = pygame.transform.smoothscale(red_King, (squarewidth*factor, squarewidth*factor))
         win.blit(img, (col*squarewidth + factor2, row*squarewidth + factor2))
     
-    elif positions[index] == 3:
+    elif positions[index] == -2:
         img = pygame.transform.smoothscale(black_King, (squarewidth*factor, squarewidth*factor))
         win.blit(img, (col*squarewidth, row*squarewidth + factor1))
 
 def highlightSquare(row, col):
-    lighter_color = DARK_BLUE if ((7*row + col) % 2 == 0) else DARK_RED     
+    lighter_color = DARK_BLUE if ((7*row + col)%2 == 0) else DARK_RED     
     pygame.draw.rect(win, lighter_color, (col*squarewidth, row*squarewidth, squarewidth, squarewidth))
 
 # draws the legal clear square which a piece can jump to (when)
@@ -122,11 +121,11 @@ for row in range(8):
 def kr(index, dir):
     if numsToEdges[index][dir] < 2:
         return False
-    return ((positions[index+dir] == 1 or positions[index+dir] == 3) and positions[index+2*dir]  == -1)
+    return ((positions[index+dir] == -1 or positions[index+dir] == -2) and positions[index+2*dir]  == 0)
 def br(index, dir):
     if numsToEdges[index][dir] < 2:
         return False
-    return ((positions[index+dir] == 0 or positions[index+dir] == 2) and positions[index+2*dir]  == -1)
+    return ((positions[index+dir] == 1 or positions[index+dir] == 2) and positions[index+2*dir]  == 0)
 
 # Gets the square coordinates from mouse click
 def getSquareFromClick(pos):
@@ -162,25 +161,25 @@ def capture_coin(kill_bit, prev_index, index):
     global total_blue
     x = (index - prev_index) // 2
     if abs(index - prev_index) % 2 == 0:
-        if positions[prev_index+x] == 0 or positions[prev_index+x] == 2:
+        if positions[prev_index+x] == 1 or positions[prev_index+x] == 2:
             total_red -= 1
-        elif positions[prev_index+x] == 1 or positions[prev_index+x] == 3:
+        elif positions[prev_index+x] == -1 or positions[prev_index+x] == -2:
             total_blue -= 1
         if total_red == 0:
             print("Blue wins")
         elif total_blue == 0:
             print("Red wins")
     if kill_bit:
-        positions[prev_index+x] = -1
+        positions[prev_index+x] = 0
         positions[index] = deepcopy(positions[prev_index])
-        positions[prev_index] = -1
+        positions[prev_index] = 0
     else:
         positions[index] = deepcopy(positions[prev_index])
-        positions[prev_index] = -1
+        positions[prev_index] = 0
     row = index//8
-    if row == 0 and (positions[index] == 1):
-        positions[index] = 3
-    elif row == 7 and (positions[index] == 0):
+    if row == 0 and (positions[index] == -1):
+        positions[index] = -2
+    elif row == 7 and (positions[index] == 1):
         positions[index] = 2
     drawboard()
         
@@ -215,7 +214,7 @@ def display_normal_moves(row, col, moves):
 def getkillmoves(index):
     dir = []
     coin = positions[index]
-    if coin == 0:
+    if coin == 1:
         dir = [7,9]
     if coin == 2:
         dir = [-9,-7,7,9]
@@ -223,9 +222,9 @@ def getkillmoves(index):
         if kr(index, i):
             moves.append(i)
     dir = []
-    if coin == 1:
+    if coin == -1:
         dir = [-7,-9]
-    if coin == 3:
+    if coin == -2:
         dir = [-9,-7,7,9]
     for i in dir:
         if br(index, i):
@@ -234,21 +233,21 @@ def getkillmoves(index):
 def getnormalmoves(index):
     dir = []
     coin = positions[index]
-    if coin==0:
+    if coin==1:
         dir = [7,9]
-    if coin == 2 or coin == 3:
+    if coin == 2 or coin == -2:
         dir = [-9,-7,7,9]
-    if coin == 1:
+    if coin == -1:
         dir = [-7,-9]
     for i in dir:
-        if (numsToEdges[index][i] >= 1) and (positions[index+i] == -1):
+        if (numsToEdges[index][i] >= 1) and (positions[index+i] == 0):
             moves.append(i)
 
 def getlegalcoins(positions, red_turn, prev_row, prev_col):
     legal_coins.clear()
     if not prev_row == -1:
         index = prev_row*8 + prev_col
-        coins = [0,1,2,3]
+        coins = [-2,-1,1,2]
         for i in coins:
             if positions[index] == i:
                 getkillmoves(index)
@@ -260,9 +259,9 @@ def getlegalcoins(positions, red_turn, prev_row, prev_col):
     else:
         kill_bit = False 
         if red_turn:
-            coins = [0,2]
+            coins = [1,2]
         else:
-            coins = [1,3]
+            coins = [-1,-2]
         for index in range(64):
                 if kill_bit:
                     for i in coins:

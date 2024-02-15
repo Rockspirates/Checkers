@@ -1,28 +1,133 @@
 import numpy as np
 from copy import deepcopy
 
-# AKSHATH, VERY IMP
-# MIGHT NEED TO CONSIDER KEEPING OPPONENT AS -1, -2 instead of 1, 3 to make it easier to flip state
+# AKSHATH, VERY IMP -- Done
+# MIGHT NEED TO CONSIDER KEEPING OPPONENT AS -1, -2 instead of 1, 3 to make it easier to flip state -- Done
 class Checkers:
+    global numsToEdges
+    global moves
+    moves = []
+    numsToEdges = []
+    for i in range(64):
+        numsToEdges.append(dict())
+    for row in range(8):
+        for col in range(8):
+            numNorth = row
+            numSouth = 7-row
+            numWest = col
+            numEast = 7 - col
+            numsToEdges[row*8 + col] = {
+                7: min(numSouth, numWest),
+                -7: min(numNorth, numEast),
+                9: min(numSouth, numEast),
+                -9: min(numNorth, numWest)
+            }
+
     def __init__(self):
         pass
     
     def get_initial_state(self):
-        return [ -1,0,-1,0,-1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,-1,0,-1,0,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,1,-1,1,-1,1,-1,1,-1,-1,1,-1,1,-1,1,-1,1,1,-1,1,-1,1,-1,1,-1]
+        return [0,1,0,1,0,1,0,1,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,-1,0,-1,0,-1,0,0,-1,0,-1,0,-1,0,-1,-1,0,-1,0,-1,0,-1,0]
    
     # action is defined as (initial_index, direction, kill_bool)
     def get_next_state(self, state, action, player): # If reaches last row, make it 2 instead of 1 # AKSHATH
         initial_index, direction, kill_bool = action
 
         state[initial_index+((kill_bool+1)*direction)] = player
+        if (initial_index+((kill_bool+1)*direction))//8 == 7 or (initial_index+((kill_bool+1)*direction))//8 == 0:
+            state[initial_index+((kill_bool+1)*direction)] *= 2
         # AKSHATH | kING IDENTIFIER
         if kill_bool:
-            state[initial_index+direction] = -1 # needs t0 be changed
+            state[initial_index+direction] = 0 # needs t0 be changed
 
         return state
     
+    def kr(self, state, index, dir):
+        if numsToEdges[index][dir] < 2:
+            return False
+        return ((state[index+dir] == -1 or state[index+dir] == -2) and state[index+2*dir]  == 0)
+
+    def br(self, state, index, dir):
+        if numsToEdges[index][dir] < 2:
+            return False
+        return ((state[index+dir] == 1 or state[index+dir] == 2) and state[index+2*dir]  == 0)
+
+    def getnormalmoves(self, state, index):
+        dir = []
+        coin = state[index]
+        if coin==1:
+            dir = [7,9]
+        if coin == 2 or coin == -2:
+            dir = [-9,-7,7,9]
+        if coin == -1:
+            dir = [-7,-9]
+        for i in dir:
+            if (numsToEdges[index][i] >= 1) and (state[index+i] == 0):
+                moves.append(i)
+    
+    def getkillmoves(self, state, index):
+        dir = []
+        coin = state[index]
+        if coin == 1:
+            dir = [7,9]
+        if coin == 2:
+            dir = [-9,-7,7,9]
+        for i in dir:
+            if self.kr(self, state, index, i):
+                moves.append(i)
+        dir = []
+        if coin == -1:
+            dir = [-7,-9]
+        if coin == -2:
+            dir = [-9,-7,7,9]
+        for i in dir:
+            if self.br(self, state, index, i):
+                moves.append(i)
+    
     def get_valid_moves(self, state, args):
-        pass # AKSHATH
+        legal_actions = []
+        if not args['prev_index'] == -1:
+            index = args['prev_index']
+            coins = [1,2]
+            for i in coins:
+                if state[index] == i:
+                    self.getkillmoves(state, index)
+                    if len(moves):
+                        for i in moves:
+                            legal_actions.append([index, i, True])
+                        moves.clear()
+                        return legal_actions
+            return legal_actions
+        else:
+            coins = [1, 2]
+            kill_bit = False
+            for index in range(64):
+                if kill_bit:
+                    for i in coins:
+                        if state[index] == i:
+                            self.getkillmoves(state, index)
+                            if len(moves):
+                                for j in moves:
+                                    legal_actions.append([index, j, True])
+                                moves.clear()
+                else:
+                    for i in coins:
+                        if state[index] == i:
+                            self.getkillmoves(state, index)
+                            if len(moves):
+                                legal_actions.clear()
+                                for j in moves:
+                                    legal_actions.append([index, j, True])
+                                kill_bit = True
+                                moves.clear()
+                                break
+                            self.getnormalmoves(state, index)
+                            if len(moves):
+                                for j in moves:
+                                    legal_actions.append([index, j, True])
+                                moves.clear()
+            return legal_actions
+        # AKSHATH - Done
 
     def check_win(self, state, action): # after doing the action, returns True if player has won and False if player has not won (yet, this might be in the middle of the game or the opponent has won)
         if action == None:
@@ -30,15 +135,18 @@ class Checkers:
         
         # Below code is the same as get_next_state
         initial_index, direction, kill_bool = action
-        player = state[initial_index + (kill_bool+1)*direction]
+        # state[initial_index + (kill_bool+1)*direction]
 
-        if player: # AKSHATH | REDUNDANT IF PLAYER IS FIXED
-            opponent = 0
-        else:
-            opponent = 1
-
+        # if player: # AKSHATH | REDUNDANT IF PLAYER IS FIXED
+        #     opponent = 0
+        # else:
+        #     opponent = 1
+        opponent = -1
         if opponent in state:
             return False # May ignore conditions where there is no legal moves while opponent still having pieces (that is technically a win | Also ignores the draw condition)
+        opponent = -2
+        if opponent in state:
+            return False
             # AKSHATH
         return True
 
